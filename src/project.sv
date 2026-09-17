@@ -108,11 +108,6 @@ function automatic [3:0] ComputeActivation(input [3:0] activation_input, input [
   end
 endfunction
 
-`ifndef CT_AR_T
-`define CT_AR_T
-typedef logic signed [3:0] array_8x4_t [0:7];
-`endif
-
   // NOTE: to make compatible with windbond flash = would only need to make addr 24 bit
   typedef enum logic[3:0] {
   STATE_INPUT_VALUES,
@@ -179,9 +174,9 @@ wire rst_n = rst_n_ext;
 
   wire [15:0] flash_addr = 16'h0000;
 
-  array_8x4_t activations_out_memory;
-  array_8x4_t activations_tmp;
-  array_8x4_t weights;
+  reg signed [7:0][3:0] activations_out_memory;
+  reg signed [7:0][3:0] activations_tmp;
+  reg signed [7:0][3:0] weights;
   reg [7:0] instruction;
   wire [3:0] bais;
   assign bais = instruction[3:0];
