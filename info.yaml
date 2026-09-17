@@ -46,7 +46,7 @@ pinout:
   # Bidirectional pins
   uio[0]: "project_extflash_spi_sck"
   uio[1]: "project_extflash_spi_mosi"
-  uio[2]: "project_extflash_spi_cs""
+  uio[2]: "project_extflash_spi_cs"
   uio[3]: "extflash_spi_miso"
   uio[4]: ""
   uio[5]: ""
