@@ -6,6 +6,52 @@ from cocotb.triggers import RisingEdge, Edge, Timer
 # 1. SPI Flash Emulator
 # ==============================================================================
 
+
+def unpack_packed_array(signal, num_elements=8, element_width=4, as_int=True):
+    """
+    Unpacks a cocotb packed array signal into a normal Python list.
+    
+    Args:
+        signal: The cocotb DUT signal object (e.g., dut.my_packed_array)
+        num_elements (int): Number of array elements (e.g., 4 for [3:0])
+        element_width (int): Bit width of each element (e.g., 8 for [7:0])
+        as_int (bool): If True, attempts to convert elements to integers. 
+                       If False or if the element contains X/Z, returns the binary string.
+                       
+    Returns:
+        list: A normal Python list containing the unpacked elements.
+    """
+    # Get the raw binary string representation (e.g., "1100101011110000...")
+    # This is safe even if the array contains 'x' or 'z'
+    flat_str = signal.value.binstr
+    
+    # Pad or handle edge cases where the simulator didn't return the full length
+    expected_len = num_elements * element_width
+    if len(flat_str) < expected_len:
+        flat_str = flat_str.zfill(expected_len)
+        
+    unpacked_list = []
+    
+    for i in range(num_elements):
+        # Slice the string from left to right (MSB chunk to LSB chunk)
+        start = i * element_width
+        end = start + element_width
+        chunk = flat_str[start:end]
+        
+        if as_int:
+            try:
+                # Convert the binary chunk to an integer
+                unpacked_list.append(int(chunk, 2))
+            except ValueError:
+                # Fallback to string if chunk contains 'x', 'z', 'u', etc.
+                unpacked_list.append(chunk)
+        else:
+            unpacked_list.append(chunk)
+            
+    return unpacked_list
+
+_upa = unpack_packed_array
+
 async def spi_flash_emulator(dut, rom_data, cs_idx=0, sclk_idx=1, mosi_idx=2, miso_idx=0):
     """
     Emulates an external SPI Flash chip (Standard SPI Mode 0, Read Cmd 0x03).
@@ -243,12 +289,16 @@ async def npu_test_only_biais(dut):
                 dut._log.info(f"{current_cycle} | current neuron {int(dut.user_project.simpleNPUTop.calc_current_neuron.value):01d} | biais: {int(dut.user_project.simpleNPUTop.bais.value):01d}")
                 w_log_str = ""
                 for i in range(8):
-                    w_log_str += f"W {i} : {to_signed_4bit(dut.user_project.simpleNPUTop.weights[i].value)} | "
+                    w_log_str += f"W {i} : {to_signed_4bit(_upa(dut.user_project.simpleNPUTop.weights)[i])} | "
                 dut._log.info(w_log_str)
                 a_log_str = ""
                 for i in range(8):
-                    a_log_str += f"A {i} : {to_signed_4bit(dut.user_project.simpleNPUTop.weights[i].value)} | "
+                    a_log_str += f"A {i} : {to_signed_4bit(_upa(dut.user_project.simpleNPUTop.activations_out_memory)[i])} | "
                 dut._log.info(a_log_str)
+                a2_log_str = ""
+                for i in range(8):
+                    a2_log_str += f"AT {i} : {to_signed_4bit(_upa(dut.user_project.simpleNPUTop.activations_tmp)[i])} | "
+                dut._log.info(a2_log_str)
 
         if current_cycle >= max_cycles:
             break
@@ -258,7 +308,7 @@ async def npu_test_only_biais(dut):
             
 
     for i in range(8):
-        assert(int(dut.user_project.simpleNPUTop.activations_out_memory[i].value) == (i+1))    
+        assert(int(_upa(dut.user_project.simpleNPUTop.activations_out_memory)[7-i]) == (i+1))  
 
     dut._log.info("simple bais test finished")
 
@@ -314,15 +364,15 @@ async def npu_test_weight_range(dut):
                 dut._log.info(f"{current_cycle} | current neuron {int(dut.user_project.simpleNPUTop.calc_current_neuron.value):01d} | biais: {int(dut.user_project.simpleNPUTop.bais.value):01d}")
                 w_log_str = ""
                 for i in range(8):
-                    w_log_str += f"W {i} : {to_signed_4bit(dut.user_project.simpleNPUTop.weights[i].value)} | "
+                    w_log_str += f"W {i} : {to_signed_4bit(_upa(dut.user_project.simpleNPUTop.weights)[i])} | "
                 dut._log.info(w_log_str)
                 a_log_str = ""
                 for i in range(8):
-                    a_log_str += f"A {i} : {to_signed_4bit(dut.user_project.simpleNPUTop.activations_out_memory[i].value)} | "
+                    a_log_str += f"A {i} : {to_signed_4bit(_upa(dut.user_project.simpleNPUTop.activations_out_memory)[i])} | "
                 dut._log.info(a_log_str)
                 a2_log_str = ""
                 for i in range(8):
-                    a2_log_str += f"AT {i} : {to_signed_4bit(dut.user_project.simpleNPUTop.activations_tmp[i].value)} | "
+                    a2_log_str += f"AT {i} : {to_signed_4bit(_upa(dut.user_project.simpleNPUTop.activations_tmp)[i])} | "
                 dut._log.info(a2_log_str)
 
         if current_cycle >= max_cycles:
@@ -333,7 +383,7 @@ async def npu_test_weight_range(dut):
             
 
     for i in range(8):
-        assert(int(dut.user_project.simpleNPUTop.activations_out_memory[i].value) == 4)  
+        assert(int(_upa(dut.user_project.simpleNPUTop.activations_out_memory)[i]) == 4)  
 
     dut._log.info("simple weight range test finished")
 
@@ -388,15 +438,15 @@ async def npu_test_weight_range2(dut):
                 dut._log.info(f"{current_cycle} | current neuron {int(dut.user_project.simpleNPUTop.calc_current_neuron.value):01d} | biais: {int(dut.user_project.simpleNPUTop.bais.value):01d}")
                 w_log_str = ""
                 for i in range(8):
-                    w_log_str += f"W {i} : {to_signed_4bit(dut.user_project.simpleNPUTop.weights[i].value)} | "
+                    w_log_str += f"W {i} : {to_signed_4bit(_upa(dut.user_project.simpleNPUTop.weights)[i])} | "
                 dut._log.info(w_log_str)
                 a_log_str = ""
                 for i in range(8):
-                    a_log_str += f"A {i} : {to_signed_4bit(dut.user_project.simpleNPUTop.activations_out_memory[i].value)} | "
+                    a_log_str += f"A {i} : {to_signed_4bit(_upa(dut.user_project.simpleNPUTop.activations_out_memory)[i])} | "
                 dut._log.info(a_log_str)
                 a2_log_str = ""
                 for i in range(8):
-                    a2_log_str += f"AT {i} : {to_signed_4bit(dut.user_project.simpleNPUTop.activations_tmp[i].value)} | "
+                    a2_log_str += f"AT {i} : {to_signed_4bit(_upa(dut.user_project.simpleNPUTop.activations_tmp)[i])} | "
                 dut._log.info(a2_log_str)
 
         if current_cycle >= max_cycles:
@@ -407,7 +457,7 @@ async def npu_test_weight_range2(dut):
             
 
     for i in range(8):
-        assert(int(dut.user_project.simpleNPUTop.activations_out_memory[i].value) == 0b1000)  
+        assert(int(_upa(dut.user_project.simpleNPUTop.activations_out_memory)[i]) == 0b1000)  
 
     dut._log.info("simple weight range 2 test finished")
 
