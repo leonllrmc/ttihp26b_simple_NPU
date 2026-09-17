@@ -1,6 +1,11 @@
+`ifndef CT_AR_T
+`define CT_AR_T
+typedef logic signed [3:0] array_8x4_t [0:7];
+`endif
+
 module weight_compute(
-   input signed [3:0] prev_activation[0:7],
-   input signed [3:0] weight[0:7],
+   input array_8x4_t prev_activation,
+   input array_8x4_t weight,
    input signed [3:0] bais,
    output signed [3:0] act_out
 );
