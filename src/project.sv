@@ -179,9 +179,9 @@ wire rst_n = rst_n_ext;
 
   wire [15:0] flash_addr = 16'h0000;
 
-  reg array_8x4_t activations_out_memory;
-  reg array_8x4_t activations_tmp;
-  reg array_8x4_t weights;
+  array_8x4_t activations_out_memory;
+  array_8x4_t activations_tmp;
+  array_8x4_t weights;
   reg [7:0] instruction;
   wire [3:0] bais;
   assign bais = instruction[3:0];
