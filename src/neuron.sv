@@ -11,7 +11,7 @@ input signed [7:0][3:0] prev_activation,
    always_comb begin
       integer j;
       for(j = 0; j < 8; j = j + 1) begin
-         mul_result[j] = prev_activation[j] * weight[j];
+         mul_result[j] = $signed(prev_activation[j]) * $signed(weight[j]);
       end
    end
 

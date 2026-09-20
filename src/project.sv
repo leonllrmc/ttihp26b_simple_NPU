@@ -217,6 +217,9 @@ wire rst_n = rst_n_ext;
       calc_current_neuron <= 3'h0;
       weight_fetch_index <= 2'b00;
 
+      data_save_pulse <= 1'b0;
+      data_save_old <= 1'b0;
+
       for(i = 0; i < 8; i = i + 1) begin
           activations_out_memory[i] <= 0;
           activations_tmp[i] <= 0;
